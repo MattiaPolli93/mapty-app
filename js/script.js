@@ -3,7 +3,6 @@
 class Workout {
     date = new Date();
     id = (Date.now() + "").slice(-10);
-    clicks = 0;
 
     constructor(coords, distance, duration) {
         this.coords = coords; // [lat, lng]
@@ -15,10 +14,6 @@ class Workout {
         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
         this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
-    }
-
-    click() {
-        this.clicks++;
     }
 }
 
@@ -72,8 +67,15 @@ class App {
     #workouts = [];
 
     constructor() {
+        // Get user's position
         this._getPosition();
+
+        // Get data from local storage
+        this._getLocalStorage();
+
+        // Attach event handlers
         form.addEventListener("submit", this._newWorkout.bind(this));
+        
         // Change between Running and Cycling
         inputType.addEventListener("change", this._toggleElevationField);
         containerWorkouts.addEventListener("click", this._moveToPopup.bind(this));
@@ -100,6 +102,11 @@ class App {
         
         // Handling clicks on map
         this.#map.on("click", this._showForm.bind(this));
+
+        // Show markers on map after loading
+        this.#workouts.forEach(work => {
+            this._renderWorkoutMarker(work);
+        });
     }
 
     _showForm(mapE) {
@@ -169,6 +176,9 @@ class App {
 
         // Hide form + clear input fields
         this._hideForm();
+
+        // Set local storage to all workout
+        this._setLocalStorage();
     }
 
     _renderWorkoutMarker(workout) {
@@ -186,12 +196,12 @@ class App {
             <li class="workout workout--${workout.type}" data-id="${workout.id}">
                 <h2 class="workout__title">${workout.description}</h2>
                 <div class="workout__details">
-                    <span class="workout__icon">${workout.type === "running" ? "🏃‍♂️" : "🚴‍♀️"}</span>
+                    <span class="workout__icon">${workout.type === "running" ? "🏃‍♂️&nbsp;" : "🚴‍♀️&nbsp;"}</span>
                     <span class="workout__value">${workout.distance}</span>
                     <span class="workout__unit">km</span>
                 </div>
                 <div class="workout__details">
-                    <span class="workout__icon">⏱</span>
+                    <span class="workout__icon">⏱&nbsp;</span>
                     <span class="workout__value">${workout.duration}</span>
                     <span class="workout__unit">min</span>
                 </div>
@@ -200,12 +210,12 @@ class App {
         if (workout.type === "running") {
             html += `
                 <div class="workout__details">
-                    <span class="workout__icon">⚡️</span>
+                    <span class="workout__icon">⚡️&nbsp;</span>
                     <span class="workout__value">${workout.pace.toFixed(1)}</span>
                     <span class="workout__unit">min/km</span>
                 </div>
                 <div class="workout__details">
-                    <span class="workout__icon">🦶🏼</span>
+                    <span class="workout__icon">🦶🏼&nbsp;</span>
                     <span class="workout__value">${workout.cadence}</span>
                     <span class="workout__unit">spm</span>
                 </div>
@@ -216,12 +226,12 @@ class App {
         if (workout.type === "cycling") {
             html += `
                 <div class="workout__details">
-                    <span class="workout__icon">⚡️</span>
+                    <span class="workout__icon">⚡️&nbsp;</span>
                     <span class="workout__value">${workout.speed.toFixed(1)}</span>
                     <span class="workout__unit">km/h</span>
                 </div>
                 <div class="workout__details">
-                    <span class="workout__icon">⛰</span>
+                    <span class="workout__icon">⛰&nbsp;</span>
                     <span class="workout__value">${workout.elevation}</span>
                     <span class="workout__unit">m</span>
                 </div>
@@ -246,9 +256,27 @@ class App {
                 duration: 1
             }
         });
+    }
 
-        // Using the public interface
-        workout.click();
+    _setLocalStorage() {
+        localStorage.setItem("workouts", JSON.stringify(this.#workouts));
+    }
+
+    _getLocalStorage() {
+        const data = JSON.parse(localStorage.getItem("workouts"));
+
+        if (!data) return;
+
+        this.#workouts = data;
+        this.#workouts.forEach(work => {
+            this._renderWorkout(work);
+        })
+    }
+
+    // Clear data in Local Storage
+    reset() {
+        localStorage.removeItem("workouts");
+        location.reload();
     }
 }
 
